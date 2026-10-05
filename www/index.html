@@ -1,0 +1,524 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#bfe9f2">
+<title>Word Bubble Pop</title>
+
+<style>
+@font-face{font-family:"Baloo 2";font-style:normal;font-weight:500;font-display:swap;src:url(fonts/baloo-2-latin-500-normal.woff2) format("woff2")}
+@font-face{font-family:"Baloo 2";font-style:normal;font-weight:700;font-display:swap;src:url(fonts/baloo-2-latin-700-normal.woff2) format("woff2")}
+@font-face{font-family:"Baloo 2";font-style:normal;font-weight:800;font-display:swap;src:url(fonts/baloo-2-latin-800-normal.woff2) format("woff2")}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box;height:100%}
+*{-webkit-touch-callout:none}
+[hidden]{display:none!important}
+img{max-width:100%}
+/* Layout: one-screen game. Word card (picture + Hindi meaning + letter slots) on top, a jungle river below where letter bubbles float up. Single bright world, deliberately one theme. */
+:root{
+  --sky:#bfe9f2;
+  --leaf:#2f8f5b;
+  --leaf-deep:#1d5e3c;
+  --water:#2a8fa3;
+  --water-deep:#155b6b;
+  --mango:#ffc93c;
+  --coral:#ff6f59;
+  --ink:#16323a;
+  --paper:#fffaf0;
+  --muted:#4f6d73;
+  --display:"Baloo 2","Trebuchet MS",system-ui,sans-serif;
+  color-scheme:light;
+}
+html,body{height:100%;margin:0}
+body{background:var(--sky);color:var(--ink);font-family:var(--display);overflow:hidden;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+button{font-family:inherit;color:inherit}
+button:focus-visible{outline:3px solid var(--coral);outline-offset:3px}
+
+.app{position:relative;height:100%;max-width:640px;margin:0 auto;padding-inline:16px;padding-block:10px 0;box-sizing:border-box;display:flex;flex-direction:column;gap:10px}
+
+/* top bar */
+.bar{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.pill{display:flex;align-items:center;gap:8px;background:var(--paper);border-radius:999px;padding:4px 14px;font-weight:800;font-size:17px;box-shadow:0 3px 0 var(--leaf-deep)}
+.pill small{font-weight:500;color:var(--muted);font-size:14px}
+.stars{color:var(--ink)}
+.stars b{color:#e0a400;font-size:20px}
+.icon-btn{border:0;background:var(--paper);width:40px;height:40px;border-radius:50%;display:grid;place-items:center;cursor:pointer;box-shadow:0 3px 0 var(--leaf-deep)}
+.icon-btn svg{width:22px;height:22px}
+.right{display:flex;gap:8px;align-items:center}
+
+/* word card */
+.card{background:var(--paper);border:3px solid var(--leaf-deep);border-radius:24px;box-shadow:0 6px 0 var(--leaf-deep);padding:12px 14px 14px;display:flex;flex-direction:column;gap:10px;position:relative}
+.card-top{display:flex;align-items:center;gap:14px}
+.pic{flex:0 0 auto;width:84px;height:84px;border-radius:50%;border:0;background:#e3f6d9;font-size:52px;line-height:1;display:grid;place-items:center;cursor:pointer;box-shadow:inset 0 -5px 0 rgba(29,94,60,.15)}
+.pic:active{transform:scale(.94)}
+.meta{min-width:0;display:flex;flex-direction:column}
+.ask{font-size:14px;color:var(--muted);font-weight:500;line-height:1.2}
+.hindi{font-size:30px;font-weight:800;line-height:1.15;color:var(--leaf-deep)}
+.tap-hint{font-size:13px;color:var(--muted);font-weight:500}
+.slots{display:flex;justify-content:center;gap:6px}
+.slot{flex:0 1 52px;aspect-ratio:5/6;max-width:52px;border-radius:12px;border:3px dashed #9ec7b0;display:grid;place-items:center;font-size:clamp(24px,7vw,34px);font-weight:800;color:var(--ink);background:#fff}
+.slot.current{border-color:var(--coral);border-style:solid;animation:blink 1s ease-in-out infinite}
+.slot.filled{background:var(--mango);border:3px solid #e0a400;animation:slotpop .3s ease-out}
+.earned{position:absolute;right:14px;top:10px;font-size:26px;color:#e0a400;font-weight:800;opacity:0;pointer-events:none}
+.earned.show{animation:rise 1.4s ease-out forwards}
+
+/* timer */
+.timer{display:flex;align-items:center;gap:10px}
+.track{flex:1;height:14px;border-radius:999px;background:#e4efe6;overflow:hidden;box-shadow:inset 0 2px 0 rgba(0,0,0,.06)}
+.fill{height:100%;width:100%;border-radius:999px;background:var(--leaf);transform-origin:left;transition:background .3s}
+.timer.low .fill{background:var(--coral)}
+.secs{flex:0 0 auto;min-width:46px;text-align:right;font-weight:800;font-size:18px;font-variant-numeric:tabular-nums;color:var(--leaf-deep)}
+.timer.low .secs{color:var(--coral);animation:blink .5s ease-in-out infinite}
+.answer{display:flex;align-items:center;justify-content:center;gap:12px;background:#eef8e8;border-radius:18px;padding:10px}
+.answer em{font-style:normal;font-size:48px;line-height:1}
+.answer b{display:block;font-size:30px;letter-spacing:.08em;line-height:1.1}
+.answer small{font-size:18px;color:var(--leaf-deep)}
+
+/* progress leaves */
+.progress{display:flex;justify-content:center;gap:8px}
+.leafdot{width:22px;height:14px;border-radius:0 100% 0 100%;background:rgba(29,94,60,.18);transition:background .3s}
+.leafdot.done{background:var(--leaf)}
+.leafdot.now{background:var(--mango)}
+
+/* river */
+.river{position:relative;flex:1;min-height:240px;border-radius:28px 28px 0 0;overflow:hidden;
+  background:
+    radial-gradient(ellipse 60px 14px at 18% 78%,rgba(255,255,255,.12),transparent 70%),
+    radial-gradient(ellipse 80px 16px at 75% 40%,rgba(255,255,255,.10),transparent 70%),
+    linear-gradient(180deg,var(--water),var(--water-deep));
+  box-shadow:inset 0 8px 0 rgba(255,255,255,.18)}
+.reed{position:absolute;bottom:-6px;font-size:54px;pointer-events:none;opacity:.95}
+.reed.l{left:-8px}.reed.r{right:-8px;transform:scaleX(-1)}
+.lily{position:absolute;width:46px;height:30px;border-radius:50%;background:#4caf6a;pointer-events:none;opacity:.55}
+.lily::after{content:"";position:absolute;left:50%;top:50%;width:14px;height:14px;background:var(--water);transform:translate(-2px,-15px) rotate(45deg)}
+
+.bubble{position:absolute;left:0;top:0;border:0;padding:0;background:none;width:var(--s);height:var(--s);cursor:pointer;will-change:transform;-webkit-tap-highlight-color:transparent;touch-action:none}
+.skin{display:grid;place-items:center;width:100%;height:100%;border-radius:50%;
+  background:
+    radial-gradient(circle at 30% 26%,rgba(255,255,255,.95) 0 8%,rgba(255,255,255,.4) 9% 18%,transparent 19%),
+    radial-gradient(circle at 50% 50%,color-mix(in srgb,var(--tint) 45%,#fff) 0 60%,color-mix(in srgb,var(--tint) 85%,#fff) 100%);
+  border:3px solid rgba(255,255,255,.9);
+  box-shadow:inset 0 -6px 12px rgba(0,0,0,.08),0 6px 14px rgba(8,45,55,.3);
+  font-weight:800;font-size:calc(var(--s) * .46);line-height:1;color:var(--ink);padding-top:.12em;box-sizing:border-box}
+.skin.pop{animation:pop .26s ease-out forwards}
+.skin.shake{animation:shake .4s ease-in-out}
+.bubble.hint .skin{animation:glow .9s ease-in-out infinite}
+.splash{position:absolute;width:10px;height:10px;border-radius:50%;background:var(--mango);pointer-events:none;animation:splash .5s ease-out forwards}
+
+/* overlays */
+.overlay{position:absolute;inset:0;z-index:5;display:grid;place-items:center;padding:16px;background:rgba(21,91,107,.55);backdrop-filter:blur(3px)}
+.panel{background:var(--paper);border:3px solid var(--leaf-deep);border-radius:28px;box-shadow:0 8px 0 var(--leaf-deep);padding:22px 20px;max-width:420px;width:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:14px;text-align:center;max-height:100%;overflow:auto}
+.logo{display:flex;justify-content:center;flex-wrap:wrap;gap:4px;margin:0}
+.logo span{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;font-size:24px;font-weight:800;border:2px solid #fff;box-shadow:0 3px 8px rgba(8,45,55,.25)}
+.logo .gap{width:10px;box-shadow:none;border:0}
+.panel h2{margin:0;font-size:28px;line-height:1.1;text-wrap:balance;color:var(--leaf-deep)}
+.panel p{margin:0;font-size:17px;line-height:1.4;color:var(--ink)}
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:8px;text-align:left}
+.steps li{display:flex;gap:10px;align-items:center;font-size:16px;line-height:1.3;background:#eef8e8;border-radius:14px;padding:8px 12px}
+.steps b{flex:0 0 auto;width:28px;height:28px;border-radius:50%;background:var(--leaf);color:#fff;display:grid;place-items:center;font-size:15px}
+.btn{border:0;border-radius:18px;padding:12px 20px;font-size:22px;font-weight:800;cursor:pointer;background:var(--mango);color:var(--ink);box-shadow:0 5px 0 #c99500}
+.btn:active{transform:translateY(3px);box-shadow:0 2px 0 #c99500}
+.link{border:0;background:none;font-size:15px;color:var(--muted);text-decoration:underline;cursor:pointer}
+.note{font-size:13px!important;color:var(--muted)!important}
+.big-stars{font-size:40px;color:#e0a400;font-weight:800;line-height:1}
+.learned{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:6px;text-align:left}
+.learned div{background:#eef8e8;border-radius:12px;padding:6px 8px;font-size:15px;line-height:1.2;min-width:0}
+.learned em{font-style:normal;font-size:20px;margin-right:4px}
+.learned small{display:block;color:var(--muted)}
+.confetti{position:absolute;top:-12px;width:10px;height:14px;border-radius:2px;pointer-events:none;z-index:6;animation:fall linear forwards}
+
+@keyframes blink{50%{box-shadow:0 0 0 4px rgba(255,111,89,.25)}}
+@keyframes slotpop{0%{transform:scale(.6)}70%{transform:scale(1.15)}100%{transform:scale(1)}}
+@keyframes pop{to{transform:scale(1.45);opacity:0}}
+@keyframes shake{20%{transform:translateX(-7px)}40%{transform:translateX(7px)}60%{transform:translateX(-5px)}80%{transform:translateX(4px)}}
+@keyframes glow{0%,100%{box-shadow:0 0 0 0 rgba(255,201,60,.9),0 6px 14px rgba(8,45,55,.3)}50%{box-shadow:0 0 0 9px rgba(255,201,60,.55),0 6px 14px rgba(8,45,55,.3)}}
+@keyframes rise{0%{opacity:0;transform:translateY(10px) scale(.8)}20%{opacity:1;transform:translateY(0) scale(1.1)}80%{opacity:1}100%{opacity:0;transform:translateY(-24px)}}
+@keyframes splash{to{transform:translate(var(--dx),var(--dy)) scale(.3);opacity:0}}
+@keyframes fall{to{transform:translateY(110vh) rotate(720deg)}}
+@media (prefers-reduced-motion:reduce){
+  .slot.current,.bubble.hint .skin{animation:none}
+  .bubble.hint .skin{box-shadow:0 0 0 7px rgba(255,201,60,.8)}
+  .skin.shake,.slot.filled{animation:none}
+  .confetti,.splash{display:none}
+}
+@media (max-width:380px){.pic{width:70px;height:70px;font-size:44px}.hindi{font-size:26px}}
+</style>
+
+</head>
+<body>
+<div class="app" id="app">
+  <div class="bar">
+    <div class="pill" id="levelPill">Level 1 <small id="levelInfo">3 letters</small></div>
+    <div class="right">
+      <div class="pill stars" aria-label="Stars"><b>★</b><span id="starCount">0</span></div>
+      <button class="icon-btn" id="soundBtn" type="button" aria-label="Mute sound" aria-pressed="true">
+        <svg id="soundOn" viewBox="0 0 24 24" fill="none" stroke="#16323a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z" fill="#ffc93c"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>
+        <svg id="soundOff" viewBox="0 0 24 24" fill="none" stroke="#16323a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" hidden><path d="M4 9h4l5-4v14l-5-4H4z" fill="#ddd"/><path d="M17 9l5 6M22 9l-5 6"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <section class="card" aria-live="polite">
+    <div class="card-top">
+      <button class="pic" id="pic" type="button" aria-label="Hear the word">🐶</button>
+      <div class="meta">
+        <span class="ask">Look at the picture</span>
+        <span class="hindi" id="hindi">What is this?</span>
+        <span class="tap-hint">Tap the picture to hear the word</span>
+      </div>
+    </div>
+    <div class="slots" id="slots"></div>
+    <div class="timer" id="timer" role="timer" aria-label="Time left">
+      <div class="track"><div class="fill" id="timeFill"></div></div>
+      <span class="secs" id="timeText">20s</span>
+    </div>
+    <div class="progress" id="progress"></div>
+    <div class="earned" id="earned">+3 ★</div>
+  </section>
+
+  <div class="river" id="river">
+    <div class="lily" style="left:12%;top:22%"></div>
+    <div class="lily" style="right:14%;top:58%;transform:scale(.8)"></div>
+    <div class="reed l" aria-hidden="true">🌿</div>
+    <div class="reed r" aria-hidden="true">🌿</div>
+  </div>
+
+  <div class="overlay" id="startOverlay">
+    <div class="panel">
+      <div class="logo" aria-hidden="true" id="logo"></div>
+      <h2>Pop the bubbles, make the word!</h2>
+      <ol class="steps">
+        <li><b>1</b><span>Look at the picture, like 🐶</span></li>
+        <li><b>2</b><span>Pop the letter bubbles in the right order: D → O → G</span></li>
+        <li><b>3</b><span>You have 20 seconds for each word. Finish in time to win stars!</span></li>
+      </ol>
+      <button class="btn" id="playBtn" type="button">Play ▶</button>
+      <button class="link" id="resetBtn" type="button" hidden>Start over</button>
+      <p class="note">On a computer, you can also type the letters on your keyboard.</p>
+    </div>
+  </div>
+
+  <div class="overlay" id="levelOverlay" hidden>
+    <div class="panel">
+      <h2 id="lvTitle">Well done! Level 1 complete</h2>
+      <div class="big-stars" id="lvStars">★ 15</div>
+      <p>Words you learned today:</p>
+      <div class="learned" id="learned"></div>
+      <button class="btn" id="nextBtn" type="button">Next level ▶</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="overOverlay" hidden>
+    <div class="panel">
+      <h2>Oops! Time's up ⏰</h2>
+      <p>That's okay! The word was:</p>
+      <div class="answer" id="answer"></div>
+      <p id="overInfo"></p>
+      <button class="btn" id="retryBtn" type="button">Play again ↻</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const POOL = {
+    3: [["CAT","🐱","बिल्ली"],["DOG","🐶","कुत्ता"],["SUN","☀️","सूरज"],["COW","🐄","गाय"],["BUS","🚌","बस"],["EGG","🥚","अंडा"],["HAT","👒","टोपी"],["CUP","☕","कप"],["BEE","🐝","मधुमक्खी"],["FOX","🦊","लोमड़ी"],["OWL","🦉","उल्लू"],["PIG","🐷","सूअर"],["BED","🛏️","बिस्तर"],["KEY","🔑","चाबी"],["ANT","🐜","चींटी"]],
+    4: [["FISH","🐟","मछली"],["BALL","⚽","गेंद"],["TREE","🌳","पेड़"],["MOON","🌙","चाँद"],["CAKE","🎂","केक"],["DUCK","🦆","बत्तख"],["FROG","🐸","मेंढक"],["LION","🦁","शेर"],["BOOK","📖","किताब"],["STAR","⭐","तारा"],["BEAR","🐻","भालू"],["KITE","🪁","पतंग"],["MILK","🥛","दूध"],["BOAT","⛵","नाव"],["HAND","✋","हाथ"]],
+    5: [["APPLE","🍎","सेब"],["MANGO","🥭","आम"],["HORSE","🐴","घोड़ा"],["TIGER","🐯","बाघ"],["HOUSE","🏠","घर"],["TRAIN","🚆","रेलगाड़ी"],["CHAIR","🪑","कुर्सी"],["GRAPE","🍇","अंगूर"],["SNAKE","🐍","साँप"],["ZEBRA","🦓","ज़ेबरा"],["CLOCK","⏰","घड़ी"],["PLANT","🪴","पौधा"],["TEETH","🦷","दाँत"],["SHEEP","🐑","भेड़"]]
+  };
+  const WORDS_PER_LEVEL = 5;
+  const WORD_TIME = 20;
+  const TINTS = ["#ff8fa3","#7bdff2","#9be58a","#ffd36e","#c8a8ff","#ffb38a"];
+  const ABC = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const $ = id => document.getElementById(id);
+  const river = $("river"), slotsEl = $("slots"), picEl = $("pic"), hindiEl = $("hindi");
+
+  const S = { level:1, stars:0, words:[], idx:0, levelStars:0, word:null, pos:0, wrong:0, miss:0, sound:true, running:false, locked:true, timeLeft:WORD_TIME, lastSec:WORD_TIME };
+  let bubbles = [], last = 0, spawnT = 0;
+
+  /* ---------- saved progress ---------- */
+  function load(){ try { return JSON.parse(localStorage.getItem("wbp-progress")) || null; } catch(e){ return null; } }
+  function save(){ try { localStorage.setItem("wbp-progress", JSON.stringify({ level:S.level, stars:S.stars })); } catch(e){} }
+
+  /* ---------- sound ---------- */
+  let ac = null;
+  function audio(){
+    if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){ return null; } }
+    if (ac.state === "suspended") ac.resume();
+    return ac;
+  }
+  function tone(f1, f2, dur, type="sine", vol=.25, delay=0){
+    if (!S.sound) return;
+    const a = audio(); if (!a) return;
+    const t = a.currentTime + delay, o = a.createOscillator(), g = a.createGain();
+    o.type = type; o.frequency.setValueAtTime(f1, t); o.frequency.exponentialRampToValueAtTime(f2, t + dur);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.001, t + dur);
+    o.connect(g).connect(a.destination); o.start(t); o.stop(t + dur + .02);
+  }
+  const sfx = {
+    pop: () => tone(520, 1500, .12, "sine", .3),
+    boop: () => tone(240, 140, .22, "triangle", .22),
+    tick: () => tone(900, 880, .05, "square", .07),
+    over: () => [392, 330, 262].forEach((f, i) => tone(f, f * .97, .28, "triangle", .2, i * .18)),
+    win: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, f * 1.01, .2, "triangle", .2, i * .11))
+  };
+  let voices = [];
+  const TTS = (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) ? (window.Capacitor.Plugins || {}).TextToSpeech : null;
+  const hasSpeech = !TTS && "speechSynthesis" in window;
+  function loadVoices(){ try { voices = speechSynthesis.getVoices(); } catch(e){} }
+  if (hasSpeech) { loadVoices(); try { speechSynthesis.onvoiceschanged = loadVoices; } catch(e){} }
+  function voiceFor(lang){ return voices.find(v => v.lang === lang) || voices.find(v => v.lang && v.lang.startsWith(lang.slice(0,2))); }
+  function say(text, lang="en-IN", cancel=false, rate=.85){
+    if (!S.sound) return;
+    if (TTS) { TTS.speak({ text, lang, rate: rate, pitch: 1.15, queueStrategy: cancel ? 0 : 1 }).catch(() => {}); return; }
+    if (!hasSpeech) return;
+    try {
+      if (cancel) speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text), v = voiceFor(lang);
+      if (lang.startsWith("hi") && !v) return;
+      if (v) u.voice = v;
+      u.lang = lang; u.rate = rate; u.pitch = 1.15;
+      speechSynthesis.speak(u);
+    } catch(e){}
+  }
+  function sayWord(spell){
+    const [w] = S.word;
+    if (spell) say(w.split("").join(", "), "en-IN", true, .8);
+    say(w.toLowerCase(), "en-IN", !spell, .8);
+  }
+
+  /* ---------- level & words ---------- */
+  function shuffle(a){ for (let i = a.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; }
+  function pickWords(level){
+    const pool = level <= 3 ? POOL[level + 2] : [...POOL[3], ...POOL[4], ...POOL[5]];
+    return shuffle([...pool]).slice(0, WORDS_PER_LEVEL);
+  }
+  const speed = () => (34 + 6 * Math.min(S.level, 8)) * Math.max(.75, river.clientHeight / 480);
+  const interval = () => Math.max(650, 1200 - S.level * 70);
+  const maxBubbles = () => Math.min(9, 5 + S.level);
+
+  function renderTop(){
+    $("levelPill").firstChild.nodeValue = "Level " + S.level + " ";
+    $("levelInfo").textContent = S.level <= 3 ? (S.level + 2) + " letters" : "mixed words";
+    $("starCount").textContent = S.stars;
+  }
+  function renderProgress(){
+    $("progress").innerHTML = S.words.map((_, i) => `<span class="leafdot ${i < S.idx ? "done" : i === S.idx ? "now" : ""}"></span>`).join("");
+  }
+  function startLevel(){
+    S.words = pickWords(S.level); S.idx = 0; S.levelStars = 0;
+    renderTop(); renderProgress(); nextWord();
+  }
+  function nextWord(){
+    S.word = S.words[S.idx]; S.pos = 0; S.wrong = 0; S.miss = 0;
+    const [w, emoji, hi] = S.word;
+    picEl.textContent = emoji;
+    slotsEl.innerHTML = w.split("").map((_, i) => `<span class="slot${i === 0 ? " current" : ""}"></span>`).join("");
+    clearBubbles(false);
+    spawnT = interval();
+    S.timeLeft = WORD_TIME; S.lastSec = WORD_TIME; renderTimer();
+    S.locked = false;
+  }
+
+  /* ---------- timer ---------- */
+  function renderTimer(){
+    const t = Math.max(0, S.timeLeft);
+    $("timeFill").style.transform = `scaleX(${t / WORD_TIME})`;
+    $("timeText").textContent = Math.ceil(t) + "s";
+    $("timer").classList.toggle("low", t <= 5);
+  }
+  function gameOver(){
+    S.locked = true; S.running = false;
+    S.timeLeft = 0; renderTimer();
+    sfx.over();
+    clearBubbles(true);
+    const [w, em] = S.word;
+    [...slotsEl.children].forEach((s, i) => { s.textContent = w[i]; s.classList.remove("current"); });
+    $("answer").innerHTML = `<em>${em}</em><div><b>${w}</b></div>`;
+    $("overInfo").textContent = S.idx === 0
+      ? "Try level " + S.level + " again. You can do it!"
+      : "You finished " + S.idx + (S.idx === 1 ? " word" : " words") + " in level " + S.level + ". Try again!";
+    setTimeout(() => { $("overOverlay").hidden = false; sayWord(true); }, 600);
+  }
+
+  /* ---------- bubbles ---------- */
+  function need(){ return S.word[0][S.pos]; }
+  function chooseLetter(H){
+    const n = need(), w = S.word[0];
+    const visibleNeed = bubbles.some(b => b.letter === n && b.y > H * .3);
+    const r = Math.random();
+    if (!visibleNeed || r < .35) return n;
+    if (r < .65) return w[Math.random() * w.length | 0];
+    return ABC[Math.random() * 26 | 0];
+  }
+  function spawn(W, H){
+    const size = Math.round(Math.max(60, Math.min(86, W / 5.2)));
+    let fx = Math.random();
+    for (let t = 0; t < 6; t++) {
+      const crowded = bubbles.some(b => b.y > H - size * 1.6 && Math.abs(b.fx - fx) < .22);
+      if (!crowded) break;
+      fx = Math.random();
+    }
+    const letter = chooseLetter(H);
+    const el = document.createElement("button");
+    el.type = "button"; el.className = "bubble"; el.tabIndex = -1;
+    el.setAttribute("aria-label", "Letter " + letter);
+    el.style.setProperty("--s", size + "px");
+    el.style.setProperty("--tint", TINTS[Math.random() * TINTS.length | 0]);
+    el.innerHTML = `<span class="skin">${letter}</span>`;
+    const b = { el, skin: el.firstChild, letter, size, fx, y: H + 4, vy: speed() * (.85 + Math.random() * .3), amp: 6 + Math.random() * 10, ph: Math.random() * 6, wf: 1.2 + Math.random(), x: 0 };
+    if (S.miss >= 2 && letter === need()) el.classList.add("hint");
+    el.addEventListener("pointerdown", e => { e.preventDefault(); tap(b); });
+    river.appendChild(el);
+    bubbles.push(b);
+  }
+  function removeBubble(b, popped){
+    bubbles = bubbles.filter(x => x !== b);
+    if (popped) { b.skin.classList.add("pop"); setTimeout(() => b.el.remove(), 280); }
+    else b.el.remove();
+  }
+  function clearBubbles(popAll){ [...bubbles].forEach(b => removeBubble(b, popAll)); }
+  function splash(b){
+    if (reduceMotion) return;
+    const cx = b.x + b.size / 2, cy = b.y + b.size / 2;
+    for (let i = 0; i < 8; i++) {
+      const s = document.createElement("span"), a = i / 8 * Math.PI * 2;
+      s.className = "splash";
+      s.style.left = cx + "px"; s.style.top = cy + "px";
+      s.style.setProperty("--dx", Math.cos(a) * 46 + "px"); s.style.setProperty("--dy", Math.sin(a) * 46 + "px");
+      river.appendChild(s); setTimeout(() => s.remove(), 520);
+    }
+  }
+
+  function tap(b){
+    if (S.locked || !S.running || !bubbles.includes(b)) return;
+    audio();
+    if (b.letter === need()) {
+      sfx.pop(); splash(b); removeBubble(b, true);
+      const slots = slotsEl.children;
+      slots[S.pos].textContent = b.letter;
+      slots[S.pos].classList.remove("current"); slots[S.pos].classList.add("filled");
+      S.pos++; S.miss = 0;
+      bubbles.forEach(x => x.el.classList.remove("hint"));
+      if (S.pos < S.word[0].length) { slots[S.pos].classList.add("current"); say(b.letter, "en-IN", true, 1); }
+      else wordDone();
+    } else {
+      sfx.boop(); S.wrong++; S.miss++;
+      b.skin.classList.remove("shake"); void b.skin.offsetWidth; b.skin.classList.add("shake");
+      if (S.miss >= 2) bubbles.forEach(x => { if (x.letter === need()) x.el.classList.add("hint"); });
+    }
+  }
+
+  function wordDone(){
+    S.locked = true;
+    const earned = S.wrong === 0 ? 3 : S.wrong <= 2 ? 2 : 1;
+    S.stars += earned; S.levelStars += earned; renderTop();
+    const e = $("earned"); e.textContent = "+" + earned + " ★";
+    e.classList.remove("show"); void e.offsetWidth; e.classList.add("show");
+    sfx.win();
+    clearBubbles(true);
+    sayWord(true);
+    setTimeout(() => {
+      S.idx++; renderProgress();
+      if (S.idx >= S.words.length) levelDone(); else nextWord();
+    }, 2800);
+  }
+
+  function levelDone(){
+    S.running = false;
+    $("lvTitle").textContent = "Well done! Level " + S.level + " complete";
+    $("lvStars").textContent = "★ " + S.levelStars;
+    $("learned").innerHTML = S.words.map(([w, em]) => `<div><em>${em}</em>${w}</div>`).join("");
+    $("levelOverlay").hidden = false;
+    confetti();
+    S.level++; save();
+  }
+  function confetti(){
+    if (reduceMotion) return;
+    const app = $("app");
+    for (let i = 0; i < 40; i++) {
+      const c = document.createElement("span");
+      c.className = "confetti";
+      c.style.left = Math.random() * 100 + "%";
+      c.style.background = [...TINTS, "#ffc93c", "#ff6f59"][i % 8];
+      c.style.animationDuration = 1.8 + Math.random() * 1.6 + "s";
+      c.style.animationDelay = Math.random() * .5 + "s";
+      app.appendChild(c); setTimeout(() => c.remove(), 4200);
+    }
+  }
+
+  /* ---------- game loop ---------- */
+  function tick(t){
+    requestAnimationFrame(tick);
+    const dt = Math.min(.05, (t - last) / 1000 || 0); last = t;
+    if (!S.running || document.hidden) return;
+    const W = river.clientWidth, H = river.clientHeight;
+    if (!S.locked) {
+      S.timeLeft -= dt;
+      const sec = Math.ceil(S.timeLeft);
+      if (sec !== S.lastSec) { S.lastSec = sec; if (sec <= 5 && sec > 0) sfx.tick(); }
+      renderTimer();
+      if (S.timeLeft <= 0) { gameOver(); return; }
+      spawnT += dt * 1000;
+      if (spawnT >= interval() && bubbles.length < maxBubbles()) { spawnT = 0; spawn(W, H); }
+    }
+    for (const b of bubbles) {
+      b.y -= b.vy * dt; b.ph += dt * b.wf;
+      b.x = Math.max(0, Math.min(W - b.size, b.fx * (W - b.size) + Math.sin(b.ph) * b.amp));
+      b.el.style.transform = `translate(${b.x}px,${b.y}px)`;
+    }
+    bubbles.filter(b => b.y < -b.size - 10).forEach(b => removeBubble(b, false));
+  }
+  requestAnimationFrame(tick);
+
+  /* ---------- controls ---------- */
+  picEl.addEventListener("click", () => { audio(); if (S.word) sayWord(false); });
+  $("soundBtn").addEventListener("click", () => {
+    S.sound = !S.sound;
+    $("soundOn").hidden = !S.sound; $("soundOff").hidden = S.sound;
+    $("soundBtn").setAttribute("aria-pressed", S.sound);
+    $("soundBtn").setAttribute("aria-label", S.sound ? "Mute sound" : "Turn sound on");
+    if (!S.sound) { if (TTS) TTS.stop().catch(() => {}); else if (hasSpeech) try { speechSynthesis.cancel(); } catch(e){} }
+  });
+  document.addEventListener("keydown", e => {
+    if (!S.running || S.locked || e.key.length !== 1) return;
+    const k = e.key.toUpperCase(), H = river.clientHeight;
+    const cands = bubbles.filter(b => b.letter === k && b.y < H - b.size * .3);
+    if (cands.length) tap(cands.sort((a, b) => a.y - b.y)[0]);
+  });
+  $("playBtn").addEventListener("click", () => {
+    audio(); $("startOverlay").hidden = true; S.running = true; startLevel();
+  });
+  $("resetBtn").addEventListener("click", () => {
+    S.level = 1; S.stars = 0; save();
+    audio(); $("startOverlay").hidden = true; S.running = true; startLevel();
+  });
+  $("retryBtn").addEventListener("click", () => {
+    audio(); $("overOverlay").hidden = true; S.running = true; startLevel();
+  });
+  $("nextBtn").addEventListener("click", () => {
+    $("levelOverlay").hidden = true; S.running = true; startLevel();
+  });
+
+  /* ---------- boot ---------- */
+  function start(data){
+    const saved = (data && data.level) ? data : load();
+    if (saved && saved.level > 1) {
+      S.level = saved.level; S.stars = saved.stars || 0;
+      $("playBtn").textContent = "Play level " + S.level + " ▶";
+      $("resetBtn").hidden = false;
+    }
+    $("logo").innerHTML = "WORD BUBBLE POP".split("").map((ch, i) =>
+      ch === " " ? `<span class="gap"></span>` : `<span style="background:${TINTS[i % TINTS.length]}">${ch}</span>`).join("");
+    S.word = POOL[3][1];
+    renderTop();
+    S.words = new Array(WORDS_PER_LEVEL).fill(0); renderProgress();
+    slotsEl.innerHTML = "DOG".split("").map((c, i) => `<span class="slot${i === 0 ? " filled" : i === 1 ? " current" : ""}">${i === 0 ? c : ""}</span>`).join("");
+  }
+  start({});
+})();
+</script>
+
+</body>
+</html>

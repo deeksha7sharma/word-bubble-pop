@@ -1,0 +1,8 @@
+{
+  "appId": "com.deeksha.wordbubblepop",
+  "appName": "Word Bubble Pop",
+  "webDir": "www",
+  "backgroundColor": "#bfe9f2",
+  "android": { "backgroundColor": "#bfe9f2" },
+  "ios": { "backgroundColor": "#bfe9f2", "contentInset": "never" }
+}
