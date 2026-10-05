@@ -1,59 +1,59 @@
 # Word Bubble Pop (Android + iOS)
 
-Bachon ke liye spelling game: picture dekho, letter bubbles sahi order mein phodo, 20 second mein word poora karo.
+A spelling game for kids: look at the picture, pop the letter bubbles in the correct order, and complete the word within 20 seconds.
 
 - App ID: `com.deeksha.wordbubblepop`
-- Game ka code: `www/index.html` (HTML + CSS + JavaScript)
+- Game code: `www/index.html` (HTML + CSS + JavaScript)
 - Android project: `android/` | iOS project: `ios/`
-- Bana hai **Capacitor** se: wahi web game, app ke andar pack kiya hua.
+- Built with **Capacitor**: the same web game packaged inside a native app.
 
-## Shuru karne se pehle (ek baar)
+## Prerequisites (one-time setup)
 
-Mac pe Node.js 22+ hona chahiye. Phir is folder mein Terminal kholo aur chalao:
+Node.js 22+ must be installed on your Mac. Then open Terminal in this folder and run:
 
 ```
 npm install
 ```
 
-Game mein koi bhi change karo (`www/index.html`) toh uske baad ye chalao, taaki dono apps update ho jaayein:
+After making any change to the game (`www/index.html`), run the following so both apps are updated:
 
 ```
 npx cap sync
 ```
 
-## Android APK — Tarika 1: GitHub se (Android Studio ki zaroorat nahi)
+## Android APK — Method 1: Via GitHub (no Android Studio needed)
 
-1. github.com pe naya **private** repository banao, aur ye poora folder usme upload/push karo.
-2. Repo mein **Actions** tab kholo → **Build Android APK** → **Run workflow**.
-3. 5–8 minute baad run khatam hoga. Run kholo, neeche **Artifacts** mein `word-bubble-pop-apk` download karo.
-4. Zip ke andar `app-debug.apk` hai. Use Android phone pe bhejo (WhatsApp/Drive) aur install karo
-   (phone "unknown apps" ki permission maangega — allow karna).
+1. Create a new **private** repository on github.com and upload/push this entire folder to it.
+2. In the repo, open the **Actions** tab → **Build Android APK** → **Run workflow**.
+3. After 5–8 minutes the run will finish. Open the run, scroll down to **Artifacts**, and download `word-bubble-pop-apk`.
+4. Inside the zip is `app-debug.apk`. Send it to an Android phone (WhatsApp/Drive) and install it
+   (the phone will ask for "unknown apps" permission — allow it).
 
-## Android APK — Tarika 2: Android Studio se
+## Android APK — Method 2: Via Android Studio
 
-1. Android Studio (**Mac with Apple chip** version) install karo.
-2. `npm run android` chalao — project Android Studio mein khul jayega.
-3. Upar ▶ **Run** dabao (emulator ya USB se juda phone).
-4. Sirf APK chahiye toh: **Build → Build App Bundle(s) / APK(s) → Build APK(s)**.
+1. Install Android Studio (**Mac with Apple chip** version).
+2. Run `npm run android` — the project will open in Android Studio.
+3. Press ▶ **Run** at the top (emulator or a USB-connected phone).
+4. If you only need the APK: **Build → Build App Bundle(s) / APK(s) → Build APK(s)**.
 
-## iOS app (iPhone)
+## iOS App (iPhone)
 
-iOS app sirf Mac + **Xcode** se banti hai (Apple ka rule).
+iOS apps can only be built on a Mac with **Xcode** (Apple's requirement).
 
-1. App Store se **Xcode** install karo aur ek baar kholo.
-2. `npm run ios` chalao — project Xcode mein khul jayega.
-3. Bayein taraf **App** project → **Signing & Capabilities** → **Team** mein apni Apple ID chuno
-   (free Apple ID se bhi apne phone pe chal jaata hai).
-4. iPhone USB se jodo, upar device mein apna iPhone chuno, ▶ **Run** dabao.
-5. Pehli baar iPhone pe: **Settings → General → VPN & Device Management** mein developer ko **Trust** karo.
-   (iOS 16+ pe **Settings → Privacy & Security → Developer Mode** bhi ON karna padega.)
+1. Install **Xcode** from the App Store and open it at least once.
+2. Run `npm run ios` — the project will open in Xcode.
+3. On the left, select the **App** project → **Signing & Capabilities** → choose your Apple ID under **Team**
+   (a free Apple ID is enough to run it on your own phone).
+4. Connect your iPhone via USB, select your iPhone as the device at the top, and press ▶ **Run**.
+5. First time on iPhone: go to **Settings → General → VPN & Device Management** and **Trust** the developer.
+   (On iOS 16+, also enable **Settings → Privacy & Security → Developer Mode**.)
 
-Free Apple ID wali app 7 din chalti hai, phir Xcode se dobara Run karna padta hai.
-App Store pe daalne ke liye Apple Developer Program ($99/saal) chahiye.
+An app signed with a free Apple ID works for 7 days, after which you need to Run again from Xcode.
+Publishing to the App Store requires the Apple Developer Program ($99/year).
 
-## Store pe publish karne se pehle
+## Before publishing to the stores
 
-- Google Play ke liye **signed release** (AAB) banana hoga: Android Studio → **Build → Generate Signed App Bundle**.
-- Bachon ki app hai, toh Play Console mein **Families policy** aur App Store mein **Kids category** ke rules follow karne honge.
-- App icon aur splash `assets/` folder mein hain. Badalne ho toh wahan nayi PNG daalo aur chalao:
+- For Google Play you need to build a **signed release** (AAB): Android Studio → **Build → Generate Signed App Bundle**.
+- This is a kids' app, so follow the **Families policy** on Play Console and the **Kids category** rules on the App Store.
+- App icon and splash screen are in the `assets/` folder. To replace them, drop new PNG files there and run:
   `npx capacitor-assets generate --android --ios`
